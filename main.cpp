@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <stdlib.h>
+#include <vector>
 
 #define FIELD_CELL_TYPE_NONE 0
 #define FIELD_CELL_TYPE_APPLE -1
@@ -174,33 +175,6 @@ void make_move()
     }
 }
 
-void handle_keyboard()
-{
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-        if (snake_direction != SNAKE_DIRECTION_DOWN) {
-            snake_direction = SNAKE_DIRECTION_UP;
-        }
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-        if (snake_direction != SNAKE_DIRECTION_LEFT) {
-            snake_direction = SNAKE_DIRECTION_RIGHT;
-        }
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-        if (snake_direction != SNAKE_DIRECTION_UP) {
-            snake_direction = SNAKE_DIRECTION_DOWN;
-        }
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-        if (snake_direction != SNAKE_DIRECTION_RIGHT) {
-            snake_direction = SNAKE_DIRECTION_LEFT;
-        }
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
-        game_over = true;
-    }
-}
-
 int main()
 {
     init_game();
@@ -209,6 +183,8 @@ int main()
 
     clear_field();
 
+    std::vector<int> snake_direction_queue;
+
     while (window.isOpen())
     {
         sf::Event event;
@@ -216,6 +192,46 @@ int main()
         {
             if (event.type == sf::Event::Closed)
                 window.close();
+            if (event.type == sf::Event::KeyPressed) {
+                int snake_direction_last = snake_direction_queue.empty() ? snake_direction : snake_direction_queue.at(0);
+                switch (event.key.code) {
+                    case sf::Keyboard::Up:
+                        if (snake_direction_last != SNAKE_DIRECTION_DOWN) {
+                            if (snake_direction_queue.size() < 2) {
+                                snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_UP);
+                            }
+                        }
+                        break;
+                    case sf::Keyboard::Right:
+                        if (snake_direction_last != SNAKE_DIRECTION_LEFT) {
+                            if (snake_direction_queue.size() < 2) {
+                                snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_RIGHT);
+                            }
+                        }
+                        break;
+                    case sf::Keyboard::Down:
+                        if (snake_direction_last != SNAKE_DIRECTION_UP) {
+                            if (snake_direction_queue.size() < 2) {
+                                snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_DOWN);
+                            }
+                        }
+                        break;
+                    case sf::Keyboard::Left:
+                        if (snake_direction_last != SNAKE_DIRECTION_RIGHT) {
+                            if (snake_direction_queue.size() < 2) {
+                                snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_LEFT);
+                            }
+                        }
+                        break;
+                    case sf::Keyboard::Escape:
+                        game_over = true;
+                        break;
+                }
+            }
+        }
+        if (!snake_direction_queue.empty()) {
+            snake_direction = snake_direction_queue.back();
+            snake_direction_queue.pop_back();
         }
 
         make_move();
@@ -227,8 +243,6 @@ int main()
         window.clear(sf::Color(183, 212, 168));
 
         draw_field(window);
-
-        handle_keyboard();
 
         window.display();
 
