@@ -31,20 +31,6 @@ sf::Sprite none;
 sf::Texture apple_texture;
 sf::Sprite apple;
 
-void init_game()
-{
-    srand(time(NULL));
-
-    snake_texture.loadFromFile("images/snake.png");
-    snake.setTexture(snake_texture);
-
-    none_texture.loadFromFile("images/none.png");
-    none.setTexture(none_texture);
-
-    apple_texture.loadFromFile("images/apple.png");
-    apple.setTexture(apple_texture);
-}
-
 int get_random_empty_cell()
 {
     int empty_cell_count = 0;
@@ -89,6 +75,21 @@ void clear_field()
         field[snake_position_y][snake_position_x - i] = snake_length - i;
     }
     add_apple();
+}
+
+void init_game()
+{
+    srand(time(NULL));
+    clear_field();
+
+    snake_texture.loadFromFile("images/snake.png");
+    snake.setTexture(snake_texture);
+
+    none_texture.loadFromFile("images/none.png");
+    none.setTexture(none_texture);
+
+    apple_texture.loadFromFile("images/apple.png");
+    apple.setTexture(apple_texture);
 }
 
 void draw_field(sf::RenderWindow &window)
@@ -180,8 +181,6 @@ int main()
     init_game();
 
     sf::RenderWindow window(sf::VideoMode(window_width, window_height), "Snake", sf::Style::Close);
-
-    clear_field();
 
     std::vector<int> snake_direction_queue;
 
