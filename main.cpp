@@ -48,11 +48,10 @@ int GetRandomEmptyCell()
 
 void add_apple()
 {
-    int apple_pos = GetRandomEmptyCell();
+    int apple_pos = get_random_empty_cell();
     if (apple_pos != -1) {
-        //
+        field[apple_pos / field_size_x][apple_pos % field_size_x] = FIELD_CELL_TYPE_APPLE;
     }
-    field[apple_pos / field_size_x][apple_pos % field_size_x] = FIELD_CELL_TYPE_APPLE;
 }
 
 void clear_field()
