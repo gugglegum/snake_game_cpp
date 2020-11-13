@@ -21,25 +21,25 @@ int snake_length = 4;
 int snake_direction = SNAKE_DIRECTION_RIGHT;
 bool game_over = false;
 
-int GetRandomEmptyCell()
+int get_random_empty_cell()
 {
-    int emptyCellCount = 0;
+    int empty_cell_count = 0;
     for (int j = 0; j < field_size_y; j++) {
         for (int i = 0; i < field_size_x; i++) {
             if (field[j][i] == FIELD_CELL_TYPE_NONE) {
-                emptyCellCount++;
+                empty_cell_count++;
             }
         }
     }
-    int targetEmptyCellIndex = rand() % emptyCellCount;
-    int emptyCellIndex = 0;
+    int target_empty_cell_index = rand() % empty_cell_count;
+    int empty_cell_index = 0;
     for (int j = 0; j < field_size_y; j++) {
         for (int i = 0; i < field_size_x; i++) {
             if (field[j][i] == FIELD_CELL_TYPE_NONE) {
-                if (emptyCellIndex == targetEmptyCellIndex) {
+                if (empty_cell_index == target_empty_cell_index) {
                     return j * field_size_x + i;
                 }
-                emptyCellIndex++;
+                empty_cell_index++;
             }
         }
     }
