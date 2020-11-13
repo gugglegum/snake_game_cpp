@@ -21,6 +21,29 @@ int snake_length = 4;
 int snake_direction = SNAKE_DIRECTION_RIGHT;
 bool game_over = false;
 
+sf::Texture snake_texture;
+sf::Sprite snake;
+
+sf::Texture none_texture;
+sf::Sprite none;
+
+sf::Texture apple_texture;
+sf::Sprite apple;
+
+void init_game()
+{
+    srand(time(NULL));
+
+    snake_texture.loadFromFile("images/snake.png");
+    snake.setTexture(snake_texture);
+
+    none_texture.loadFromFile("images/none.png");
+    none.setTexture(none_texture);
+
+    apple_texture.loadFromFile("images/apple.png");
+    apple.setTexture(apple_texture);
+}
+
 int get_random_empty_cell()
 {
     int empty_cell_count = 0;
@@ -69,21 +92,6 @@ void clear_field()
 
 void draw_field(sf::RenderWindow &window)
 {
-    sf::Texture snake_texture;
-    snake_texture.loadFromFile("images/snake.png");
-    sf::Sprite snake;
-    snake.setTexture(snake_texture);
-
-    sf::Texture none_texture;
-    none_texture.loadFromFile("images/none.png");
-    sf::Sprite none;
-    none.setTexture(none_texture);
-
-    sf::Texture apple_texture;
-    apple_texture.loadFromFile("images/apple.png");
-    sf::Sprite apple;
-    apple.setTexture(apple_texture);
-
     for (int j = 0; j < field_size_y; j++) {
         for (int i = 0; i < field_size_x; i++) {
             switch (field[j][i]) {
@@ -195,7 +203,7 @@ void handle_keyboard()
 
 int main()
 {
-    srand(time(NULL));
+    init_game();
 
     sf::RenderWindow window(sf::VideoMode(window_width, window_height), "Snake", sf::Style::Close);
 
