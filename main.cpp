@@ -325,9 +325,6 @@ int main()
 
         if (game_over) {
             window.draw(text_game_over);
-            window.display();
-            sf::sleep(sf::seconds(2));
-            window.close();
         }
 
         window.clear(sf::Color(183, 212, 168));
@@ -337,6 +334,10 @@ int main()
 
         window.display();
 
+        if (game_over) {
+            sf::sleep(sf::seconds(2));
+            window.close();
+        }
         sf::sleep(sf::milliseconds(100));
     }
 
