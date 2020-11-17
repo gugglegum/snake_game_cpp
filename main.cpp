@@ -245,8 +245,6 @@ void make_move()
                 break;
             case FIELD_CELL_TYPE_WALL:
                 sound_died_against_the_wall.play();
-                game_over = true;
-                break;
             default:
                 sound_ate_himself.play();
                 game_over = true;
