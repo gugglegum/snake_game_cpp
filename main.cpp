@@ -251,12 +251,14 @@ void make_move()
         }
     }
 
-    field[snake_position_y][snake_position_x] = snake_length + 1;
+    if (!game_over) {
+        field[snake_position_y][snake_position_x] = snake_length + 1;
 
-    for (int j = 0; j < field_size_y; j++) {
-        for (int i = 0; i < field_size_x; i++) {
-            if (field[j][i] > FIELD_CELL_TYPE_NONE) {
-                field[j][i]--;
+        for (int j = 0; j < field_size_y; j++) {
+            for (int i = 0; i < field_size_x; i++) {
+                if (field[j][i] > FIELD_CELL_TYPE_NONE) {
+                    field[j][i]--;
+                }
             }
         }
     }
@@ -321,21 +323,20 @@ int main()
 
         make_move();
 
-        if (game_over) {
-            window.draw(text_game_over);
-        }
-
         window.clear(sf::Color(183, 212, 168));
 
         draw_field(window);
         draw_score_bar(window);
 
-        window.display();
-
         if (game_over) {
+            window.draw(text_game_over);
+            window.display();
             sf::sleep(sf::seconds(2));
             window.close();
         }
+
+        window.display();
+
         sf::sleep(sf::milliseconds(100));
     }
 
