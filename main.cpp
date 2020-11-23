@@ -10,6 +10,9 @@
 #define SNAKE_DIRECTION_RIGHT 1
 #define SNAKE_DIRECTION_DOWN 2
 #define SNAKE_DIRECTION_LEFT 3
+#define MENU_ITEM_START "Start new game"
+#define MENU_ITEM_SETTINGS "Settings"
+#define MENU_ITEM_QUIT "Quit"
 
 const int field_size_x = 35;
 const int field_size_y = 25;
@@ -19,12 +22,16 @@ const int window_width = field_size_x * cell_size;
 const int window_height = field_size_y * cell_size + score_bar_height;
 
 int field[field_size_y][field_size_x];
-int snake_position_x = field_size_x / 2;
-int snake_position_y = field_size_y / 2;
-int snake_length = 4;
+int snake_position_x;
+int snake_position_y;
+int snake_length = 0;
 int snake_direction = SNAKE_DIRECTION_RIGHT;
 int score = 0;
+bool game_started = false;
 bool game_over = false;
+int game_over_timeout = 0;
+bool game_paused = true;
+int current_menu_item_index = 0;
 
 sf::Texture snake_texture;
 sf::Sprite snake;
@@ -37,6 +44,12 @@ sf::Sprite apple;
 
 sf::Texture wall_texture;
 sf::Sprite wall;
+
+sf::SoundBuffer sb_menu_navigate;
+sf::Sound sound_menu_navigate;
+
+sf::SoundBuffer sb_game_start;
+sf::Sound sound_game_start;
 
 sf::SoundBuffer sb_ate_apple;
 sf::Sound sound_ate_apple;
@@ -55,6 +68,10 @@ sf::Text text_title;
 
 sf::Font font_game_over;
 sf::Text text_game_over;
+
+sf::Font font_menu;
+std::vector<sf::Text> text_menu_items;
+std::vector<std::string> menu_items = {MENU_ITEM_START, MENU_ITEM_SETTINGS, MENU_ITEM_QUIT};
 
 int get_random_empty_cell()
 {
@@ -131,6 +148,12 @@ void init_game()
     wall_texture.loadFromFile("images/wall.png");
     wall.setTexture(wall_texture);
 
+    sb_menu_navigate.loadFromFile("sounds/menu-navigate-02.wav");
+    sound_menu_navigate.setBuffer(sb_menu_navigate);
+
+    sb_game_start.loadFromFile("sounds/jingle-achievement-01.wav");
+    sound_game_start.setBuffer(sb_game_start);
+
     sb_ate_apple.loadFromFile("sounds/collect-point-01.wav");
     sound_ate_apple.setBuffer(sb_ate_apple);
 
@@ -158,6 +181,36 @@ void init_game()
     text_game_over.setCharacterSize(120);
     text_game_over.setFillColor(sf::Color::Red);
     text_game_over.setPosition((window_width - text_game_over.getLocalBounds().width) / 2, (window_height - text_game_over.getLocalBounds().height + score_bar_height) / 2);
+
+    font_menu.loadFromFile("fonts/BigOldBoldy-dEjR.ttf");
+    for (int i = 0; i < menu_items.size(); i++) {
+        text_menu_items.emplace_back(sf::Text());
+        text_menu_items.back().setString(menu_items.at(i));
+        text_menu_items.back().setFont(font_menu);
+        text_menu_items.back().setCharacterSize(40);
+    }
+}
+
+void start_game()
+{
+    snake_position_x = field_size_x / 2;
+    snake_position_y = field_size_y / 2;
+    snake_length = 4;
+    snake_direction = SNAKE_DIRECTION_RIGHT;
+    score = 0;
+    game_started = true;
+    game_over = false;
+    game_paused = false;
+    clear_field();
+    sound_game_start.play();
+}
+
+void finish_game()
+{
+    game_over = true;
+    game_paused = true;
+    game_over_timeout = 20;
+    current_menu_item_index = 0;
 }
 
 void draw_field(sf::RenderWindow &window)
@@ -192,6 +245,38 @@ void draw_score_bar(sf::RenderWindow &window)
     text_score.setString("Score: " + std::to_string(score));
     text_score.setPosition(window_width - text_score.getLocalBounds().width - 20, 10);
     window.draw(text_score);
+}
+
+void draw_menu(sf::RenderWindow &window)
+{
+    float const menu_padding_horizontal = 40;
+    float const menu_padding_vertical = 30;
+    float const menu_item_interval = 20;
+
+    float menu_item_max_width = 0;
+    float current_menu_item_offset_y = 0;
+    for (int i = 0; i < text_menu_items.size(); i++) {
+        text_menu_items.at(i).setPosition(0, current_menu_item_offset_y);
+        text_menu_items.at(i).setFillColor(current_menu_item_index == i ? sf::Color(224, 224, 224) : sf::Color(128, 128, 128));
+        current_menu_item_offset_y += text_menu_items.at(i).getLocalBounds().height + menu_item_interval;
+        menu_item_max_width = std::max(menu_item_max_width, text_menu_items.at(i).getLocalBounds().width);
+    }
+
+    float const menu_width = menu_item_max_width + menu_padding_horizontal * 2;
+    float const menu_height = current_menu_item_offset_y - menu_item_interval + menu_padding_vertical * 2;
+
+    float const menu_position_x = (window_width - menu_width) / 2;
+    float const menu_position_y = (window_height - menu_height) / 2;
+
+    sf::RectangleShape menu_rect(sf::Vector2f(menu_width, menu_height));
+    menu_rect.setPosition(menu_position_x, menu_position_y);
+    menu_rect.setFillColor(sf::Color(0, 0, 0, 224));
+    window.draw(menu_rect);
+
+    for (int i = 0; i < text_menu_items.size(); i++) {
+        text_menu_items.at(i).move(menu_position_x + menu_padding_horizontal, menu_position_y + menu_padding_vertical);
+        window.draw(text_menu_items.at(i));
+    }
 }
 
 void grow_snake()
@@ -245,12 +330,12 @@ void make_move()
                 break;
             case FIELD_CELL_TYPE_WALL:
                 sound_died_against_the_wall.play();
-                game_over = true;
+                finish_game();
                 break;
             default:
                 if (field[snake_position_y][snake_position_x] > 1) {
                     sound_ate_himself.play();
-                    game_over = true;
+                    finish_game();
                 }
         }
     }
@@ -283,39 +368,75 @@ int main()
             if (event.type == sf::Event::Closed)
                 window.close();
             if (event.type == sf::Event::KeyPressed) {
-                int snake_direction_last = snake_direction_queue.empty() ? snake_direction : snake_direction_queue.at(0);
-                switch (event.key.code) {
-                    case sf::Keyboard::Up:
-                        if (snake_direction_last != SNAKE_DIRECTION_DOWN) {
-                            if (snake_direction_queue.size() < 2) {
-                                snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_UP);
-                            }
+                if (game_paused) {
+                    if (game_over_timeout == 0) {
+                        switch (event.key.code) {
+                            case sf::Keyboard::Up:
+                                sound_menu_navigate.play();
+                                current_menu_item_index--;
+                                if (current_menu_item_index < 0) {
+                                    current_menu_item_index = text_menu_items.size() - 1;
+                                }
+                                break;
+                            case sf::Keyboard::Down:
+                                sound_menu_navigate.play();
+                                current_menu_item_index++;
+                                if (current_menu_item_index > text_menu_items.size() - 1) {
+                                    current_menu_item_index = 0;
+                                }
+                                break;
+                            case sf::Keyboard::Enter:
+                                if (menu_items.at(current_menu_item_index) == MENU_ITEM_START) {
+                                    start_game();
+                                }
+                                if (menu_items.at(current_menu_item_index) == MENU_ITEM_QUIT) {
+                                    window.close();
+                                }
+                                break;
+                            case sf::Keyboard::Escape:
+                                if (!game_over && game_started) {
+                                    game_paused = false;
+                                }
+                                break;
                         }
-                        break;
-                    case sf::Keyboard::Right:
-                        if (snake_direction_last != SNAKE_DIRECTION_LEFT) {
-                            if (snake_direction_queue.size() < 2) {
-                                snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_RIGHT);
+                    } else {
+                        game_over_timeout = 0;
+                    }
+                } else {
+                    int snake_direction_last = snake_direction_queue.empty() ? snake_direction : snake_direction_queue.at(0);
+                    switch (event.key.code) {
+                        case sf::Keyboard::Up:
+                            if (snake_direction_last != SNAKE_DIRECTION_DOWN) {
+                                if (snake_direction_queue.size() < 2) {
+                                    snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_UP);
+                                }
                             }
-                        }
-                        break;
-                    case sf::Keyboard::Down:
-                        if (snake_direction_last != SNAKE_DIRECTION_UP) {
-                            if (snake_direction_queue.size() < 2) {
-                                snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_DOWN);
+                            break;
+                        case sf::Keyboard::Right:
+                            if (snake_direction_last != SNAKE_DIRECTION_LEFT) {
+                                if (snake_direction_queue.size() < 2) {
+                                    snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_RIGHT);
+                                }
                             }
-                        }
-                        break;
-                    case sf::Keyboard::Left:
-                        if (snake_direction_last != SNAKE_DIRECTION_RIGHT) {
-                            if (snake_direction_queue.size() < 2) {
-                                snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_LEFT);
+                            break;
+                        case sf::Keyboard::Down:
+                            if (snake_direction_last != SNAKE_DIRECTION_UP) {
+                                if (snake_direction_queue.size() < 2) {
+                                    snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_DOWN);
+                                }
                             }
-                        }
-                        break;
-                    case sf::Keyboard::Escape:
-                        game_over = true;
-                        break;
+                            break;
+                        case sf::Keyboard::Left:
+                            if (snake_direction_last != SNAKE_DIRECTION_RIGHT) {
+                                if (snake_direction_queue.size() < 2) {
+                                    snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_LEFT);
+                                }
+                            }
+                            break;
+                        case sf::Keyboard::Escape:
+                            game_paused = true;
+                            break;
+                    }
                 }
             }
         }
@@ -324,7 +445,9 @@ int main()
             snake_direction_queue.pop_back();
         }
 
-        make_move();
+        if (!game_paused) {
+            make_move();
+        }
 
         window.clear(sf::Color(183, 212, 168));
 
@@ -333,9 +456,13 @@ int main()
 
         if (game_over) {
             window.draw(text_game_over);
-            window.display();
-            sf::sleep(sf::seconds(2));
-            window.close();
+            if (game_over_timeout > 0) {
+                game_over_timeout--;
+            }
+        }
+
+        if (game_paused && game_over_timeout == 0) {
+            draw_menu(window);
         }
 
         window.display();
