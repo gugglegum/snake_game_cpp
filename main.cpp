@@ -1,6 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
-#include <stdlib.h>
+#include <cstdlib>
 #include <vector>
 
 #define FIELD_CELL_TYPE_NONE 0
@@ -66,7 +66,7 @@ int get_random_empty_cell()
             }
         }
     }
-    int target_empty_cell_index = rand() % empty_cell_count;
+    int target_empty_cell_index = std::rand() % empty_cell_count;
     int empty_cell_index = 0;
     for (int j = 0; j < field_size_y; j++) {
         for (int i = 0; i < field_size_x; i++) {
@@ -116,7 +116,7 @@ void clear_field()
 
 void init_game()
 {
-    srand(time(NULL));
+    std::srand(time(NULL));
     clear_field();
 
     snake_texture.loadFromFile("images/snake.png");
