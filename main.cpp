@@ -254,8 +254,6 @@ void make_move()
     }
 
     if (!game_over) {
-        field[snake_position_y][snake_position_x] = snake_length + 1;
-
         for (int j = 0; j < field_size_y; j++) {
             for (int i = 0; i < field_size_x; i++) {
                 if (field[j][i] > FIELD_CELL_TYPE_NONE) {
@@ -263,6 +261,7 @@ void make_move()
                 }
             }
         }
+        field[snake_position_y][snake_position_x] = snake_length;
     }
 }
 
