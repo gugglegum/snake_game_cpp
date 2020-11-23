@@ -248,8 +248,10 @@ void make_move()
                 game_over = true;
                 break;
             default:
-                sound_ate_himself.play();
-                game_over = true;
+                if (field[snake_position_y][snake_position_x] > 1) {
+                    sound_ate_himself.play();
+                    game_over = true;
+                }
         }
     }
 
