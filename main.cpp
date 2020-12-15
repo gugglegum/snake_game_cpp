@@ -11,6 +11,7 @@
 #define SNAKE_DIRECTION_DOWN 2
 #define SNAKE_DIRECTION_LEFT 3
 #define MENU_ITEM_START "Start new game"
+#define MENU_ITEM_RESUME "Resume game"
 #define MENU_ITEM_SETTINGS "Settings"
 #define MENU_ITEM_QUIT "Quit"
 #define MENU_ITEM_BACK "Back to main menu"
@@ -282,6 +283,9 @@ void draw_main_menu(sf::RenderWindow &window)
     float menu_item_max_width = 0;
     float current_menu_item_offset_y = 0;
     for (int i = 0; i < text_main_menu_items.size(); i++) {
+        if (game_started && main_menu_items.at(i) == MENU_ITEM_START) {
+            text_main_menu_items.at(i).setString(MENU_ITEM_RESUME);
+        }
         text_main_menu_items.at(i).setPosition(0, current_menu_item_offset_y);
         text_main_menu_items.at(i).setFillColor(current_main_menu_item_index == i ? sf::Color(224, 224, 224) : sf::Color(128, 128, 128));
         current_menu_item_offset_y += text_main_menu_items.at(i).getLocalBounds().height + menu_item_interval;
@@ -314,13 +318,13 @@ void draw_settings_menu(sf::RenderWindow &window)
     float menu_item_max_width = 0;
     float current_menu_item_offset_y = 0;
     for (int i = 0; i < text_settings_menu_items.size(); i++) {
+        if (settings_menu_items.at(i) == MENU_ITEM_VOLUME) {
+            text_settings_menu_items.at(i).setString(settings_menu_items.at(i) + ": " + std::to_string(settings_volume));
+        }
         text_settings_menu_items.at(i).setPosition(0, current_menu_item_offset_y);
         text_settings_menu_items.at(i).setFillColor(current_settings_menu_item_index == i ? sf::Color(224, 224, 224) : sf::Color(128, 128, 128));
         current_menu_item_offset_y += text_settings_menu_items.at(i).getLocalBounds().height + menu_item_interval;
         menu_item_max_width = std::max(menu_item_max_width, text_settings_menu_items.at(i).getLocalBounds().width);
-        if (settings_menu_items.at(i) == MENU_ITEM_VOLUME) {
-            text_settings_menu_items.at(i).setString(settings_menu_items.at(i) + ": " + std::to_string(settings_volume));
-        }
     }
 
     float const menu_width = menu_item_max_width + menu_padding_horizontal * 2;
@@ -450,7 +454,11 @@ int main()
                                 case sf::Keyboard::Enter:
                                     sound_menu_navigate.play();
                                     if (main_menu_items.at(current_main_menu_item_index) == MENU_ITEM_START) {
-                                        start_game();
+                                        if (!game_over && game_started) {
+                                            game_paused = false;
+                                        } else {
+                                            start_game();
+                                        }
                                     }
                                     if (main_menu_items.at(current_main_menu_item_index) == MENU_ITEM_SETTINGS) {
                                         current_menu = MENU_SETTINGS;
