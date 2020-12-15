@@ -13,6 +13,10 @@
 #define MENU_ITEM_START "Start new game"
 #define MENU_ITEM_SETTINGS "Settings"
 #define MENU_ITEM_QUIT "Quit"
+#define MENU_ITEM_BACK "Back to main menu"
+#define MENU_ITEM_VOLUME "Volume"
+#define MENU_MAIN 0
+#define MENU_SETTINGS 1
 
 const int field_size_x = 35;
 const int field_size_y = 25;
@@ -31,7 +35,10 @@ bool game_started = false;
 bool game_over = false;
 int game_over_timeout = 0;
 bool game_paused = true;
-int current_menu_item_index = 0;
+int current_menu = MENU_MAIN;
+int current_main_menu_item_index = 0;
+int current_settings_menu_item_index = 0;
+int settings_volume = 50;
 
 sf::Texture snake_texture;
 sf::Sprite snake;
@@ -70,8 +77,10 @@ sf::Font font_game_over;
 sf::Text text_game_over;
 
 sf::Font font_menu;
-std::vector<sf::Text> text_menu_items;
-std::vector<std::string> menu_items = {MENU_ITEM_START, MENU_ITEM_SETTINGS, MENU_ITEM_QUIT};
+std::vector<sf::Text> text_main_menu_items;
+std::vector<std::string> main_menu_items = {MENU_ITEM_START, MENU_ITEM_SETTINGS, MENU_ITEM_QUIT};
+std::vector<sf::Text> text_settings_menu_items;
+std::vector<std::string> settings_menu_items = {MENU_ITEM_BACK, MENU_ITEM_VOLUME};
 
 int get_random_empty_cell()
 {
@@ -131,6 +140,15 @@ void clear_field()
     add_apple();
 }
 
+void set_volume()
+{
+    sound_menu_navigate.setVolume(settings_volume);
+    sound_game_start.setVolume(settings_volume);
+    sound_ate_apple.setVolume(settings_volume);
+    sound_died_against_the_wall.setVolume(settings_volume);
+    sound_ate_himself.setVolume(settings_volume);
+}
+
 void init_game()
 {
     std::srand(time(NULL));
@@ -163,6 +181,8 @@ void init_game()
     sb_ate_himself.loadFromFile("sounds/explosion-00.wav");
     sound_ate_himself.setBuffer(sb_ate_himself);
 
+    set_volume();
+
     font_score.loadFromFile("fonts/ShockMintFund-YzA8v.ttf");
     text_score.setFont(font_score);
     text_score.setCharacterSize(36);
@@ -183,11 +203,17 @@ void init_game()
     text_game_over.setPosition((window_width - text_game_over.getLocalBounds().width) / 2, (window_height - text_game_over.getLocalBounds().height + score_bar_height) / 2);
 
     font_menu.loadFromFile("fonts/BigOldBoldy-dEjR.ttf");
-    for (int i = 0; i < menu_items.size(); i++) {
-        text_menu_items.emplace_back(sf::Text());
-        text_menu_items.back().setString(menu_items.at(i));
-        text_menu_items.back().setFont(font_menu);
-        text_menu_items.back().setCharacterSize(40);
+    for (int i = 0; i < main_menu_items.size(); i++) {
+        text_main_menu_items.emplace_back(sf::Text());
+        text_main_menu_items.back().setString(main_menu_items.at(i));
+        text_main_menu_items.back().setFont(font_menu);
+        text_main_menu_items.back().setCharacterSize(40);
+    }
+    for (int i = 0; i < settings_menu_items.size(); i++) {
+        text_settings_menu_items.emplace_back(sf::Text());
+        text_settings_menu_items.back().setString(settings_menu_items.at(i));
+        text_settings_menu_items.back().setFont(font_menu);
+        text_settings_menu_items.back().setCharacterSize(40);
     }
 }
 
@@ -210,7 +236,7 @@ void finish_game()
     game_over = true;
     game_paused = true;
     game_over_timeout = 20;
-    current_menu_item_index = 0;
+    current_main_menu_item_index = 0;
 }
 
 void draw_field(sf::RenderWindow &window)
@@ -247,7 +273,7 @@ void draw_score_bar(sf::RenderWindow &window)
     window.draw(text_score);
 }
 
-void draw_menu(sf::RenderWindow &window)
+void draw_main_menu(sf::RenderWindow &window)
 {
     float const menu_padding_horizontal = 40;
     float const menu_padding_vertical = 30;
@@ -255,11 +281,11 @@ void draw_menu(sf::RenderWindow &window)
 
     float menu_item_max_width = 0;
     float current_menu_item_offset_y = 0;
-    for (int i = 0; i < text_menu_items.size(); i++) {
-        text_menu_items.at(i).setPosition(0, current_menu_item_offset_y);
-        text_menu_items.at(i).setFillColor(current_menu_item_index == i ? sf::Color(224, 224, 224) : sf::Color(128, 128, 128));
-        current_menu_item_offset_y += text_menu_items.at(i).getLocalBounds().height + menu_item_interval;
-        menu_item_max_width = std::max(menu_item_max_width, text_menu_items.at(i).getLocalBounds().width);
+    for (int i = 0; i < text_main_menu_items.size(); i++) {
+        text_main_menu_items.at(i).setPosition(0, current_menu_item_offset_y);
+        text_main_menu_items.at(i).setFillColor(current_main_menu_item_index == i ? sf::Color(224, 224, 224) : sf::Color(128, 128, 128));
+        current_menu_item_offset_y += text_main_menu_items.at(i).getLocalBounds().height + menu_item_interval;
+        menu_item_max_width = std::max(menu_item_max_width, text_main_menu_items.at(i).getLocalBounds().width);
     }
 
     float const menu_width = menu_item_max_width + menu_padding_horizontal * 2;
@@ -273,9 +299,44 @@ void draw_menu(sf::RenderWindow &window)
     menu_rect.setFillColor(sf::Color(0, 0, 0, 224));
     window.draw(menu_rect);
 
-    for (int i = 0; i < text_menu_items.size(); i++) {
-        text_menu_items.at(i).move(menu_position_x + menu_padding_horizontal, menu_position_y + menu_padding_vertical);
-        window.draw(text_menu_items.at(i));
+    for (int i = 0; i < text_main_menu_items.size(); i++) {
+        text_main_menu_items.at(i).move(menu_position_x + menu_padding_horizontal, menu_position_y + menu_padding_vertical);
+        window.draw(text_main_menu_items.at(i));
+    }
+}
+
+void draw_settings_menu(sf::RenderWindow &window)
+{
+    float const menu_padding_horizontal = 40;
+    float const menu_padding_vertical = 30;
+    float const menu_item_interval = 20;
+
+    float menu_item_max_width = 0;
+    float current_menu_item_offset_y = 0;
+    for (int i = 0; i < text_settings_menu_items.size(); i++) {
+        text_settings_menu_items.at(i).setPosition(0, current_menu_item_offset_y);
+        text_settings_menu_items.at(i).setFillColor(current_settings_menu_item_index == i ? sf::Color(224, 224, 224) : sf::Color(128, 128, 128));
+        current_menu_item_offset_y += text_settings_menu_items.at(i).getLocalBounds().height + menu_item_interval;
+        menu_item_max_width = std::max(menu_item_max_width, text_settings_menu_items.at(i).getLocalBounds().width);
+        if (settings_menu_items.at(i) == MENU_ITEM_VOLUME) {
+            text_settings_menu_items.at(i).setString(settings_menu_items.at(i) + ": " + std::to_string(settings_volume));
+        }
+    }
+
+    float const menu_width = menu_item_max_width + menu_padding_horizontal * 2;
+    float const menu_height = current_menu_item_offset_y - menu_item_interval + menu_padding_vertical * 2;
+
+    float const menu_position_x = (window_width - menu_width) / 2;
+    float const menu_position_y = (window_height - menu_height) / 2;
+
+    sf::RectangleShape menu_rect(sf::Vector2f(menu_width, menu_height));
+    menu_rect.setPosition(menu_position_x, menu_position_y);
+    menu_rect.setFillColor(sf::Color(0, 0, 0, 224));
+    window.draw(menu_rect);
+
+    for (int i = 0; i < text_settings_menu_items.size(); i++) {
+        text_settings_menu_items.at(i).move(menu_position_x + menu_padding_horizontal, menu_position_y + menu_padding_vertical);
+        window.draw(text_settings_menu_items.at(i));
     }
 }
 
@@ -370,34 +431,87 @@ int main()
             if (event.type == sf::Event::KeyPressed) {
                 if (game_paused) {
                     if (game_over_timeout == 0) {
-                        switch (event.key.code) {
-                            case sf::Keyboard::Up:
-                                sound_menu_navigate.play();
-                                current_menu_item_index--;
-                                if (current_menu_item_index < 0) {
-                                    current_menu_item_index = text_menu_items.size() - 1;
-                                }
-                                break;
-                            case sf::Keyboard::Down:
-                                sound_menu_navigate.play();
-                                current_menu_item_index++;
-                                if (current_menu_item_index > text_menu_items.size() - 1) {
-                                    current_menu_item_index = 0;
-                                }
-                                break;
-                            case sf::Keyboard::Enter:
-                                if (menu_items.at(current_menu_item_index) == MENU_ITEM_START) {
-                                    start_game();
-                                }
-                                if (menu_items.at(current_menu_item_index) == MENU_ITEM_QUIT) {
-                                    window.close();
-                                }
-                                break;
-                            case sf::Keyboard::Escape:
-                                if (!game_over && game_started) {
-                                    game_paused = false;
-                                }
-                                break;
+                        if (current_menu == MENU_MAIN) {
+                            switch (event.key.code) {
+                                case sf::Keyboard::Up:
+                                    sound_menu_navigate.play();
+                                    current_main_menu_item_index--;
+                                    if (current_main_menu_item_index < 0) {
+                                        current_main_menu_item_index = text_main_menu_items.size() - 1;
+                                    }
+                                    break;
+                                case sf::Keyboard::Down:
+                                    sound_menu_navigate.play();
+                                    current_main_menu_item_index++;
+                                    if (current_main_menu_item_index > text_main_menu_items.size() - 1) {
+                                        current_main_menu_item_index = 0;
+                                    }
+                                    break;
+                                case sf::Keyboard::Enter:
+                                    sound_menu_navigate.play();
+                                    if (main_menu_items.at(current_main_menu_item_index) == MENU_ITEM_START) {
+                                        start_game();
+                                    }
+                                    if (main_menu_items.at(current_main_menu_item_index) == MENU_ITEM_SETTINGS) {
+                                        current_menu = MENU_SETTINGS;
+                                        current_settings_menu_item_index = 0;
+                                    }
+                                    if (main_menu_items.at(current_main_menu_item_index) == MENU_ITEM_QUIT) {
+                                        window.close();
+                                    }
+                                    break;
+                                case sf::Keyboard::Escape:
+                                    sound_menu_navigate.play();
+                                    if (!game_over && game_started) {
+                                        game_paused = false;
+                                    }
+                                    break;
+                            }
+                        } else if (current_menu == MENU_SETTINGS) {
+                            switch (event.key.code) {
+                                case sf::Keyboard::Up:
+                                    sound_menu_navigate.play();
+                                    current_settings_menu_item_index--;
+                                    if (current_settings_menu_item_index < 0) {
+                                        current_settings_menu_item_index = text_settings_menu_items.size() - 1;
+                                    }
+                                    break;
+                                case sf::Keyboard::Down:
+                                    sound_menu_navigate.play();
+                                    current_settings_menu_item_index++;
+                                    if (current_settings_menu_item_index > text_settings_menu_items.size() - 1) {
+                                        current_settings_menu_item_index = 0;
+                                    }
+                                    break;
+                                case sf::Keyboard::Left:
+                                    if (settings_menu_items.at(current_settings_menu_item_index) == MENU_ITEM_VOLUME) {
+                                        if (settings_volume > 0) {
+                                            settings_volume -= 5;
+                                            set_volume();
+                                            sound_menu_navigate.play();
+                                        }
+                                    }
+                                    break;
+                                case sf::Keyboard::Right:
+                                    if (settings_menu_items.at(current_settings_menu_item_index) == MENU_ITEM_VOLUME) {
+                                        if (settings_volume < 100) {
+                                            settings_volume += 5;
+                                            set_volume();
+                                            sound_menu_navigate.play();
+                                        }
+                                    }
+                                    break;
+                                case sf::Keyboard::Enter:
+                                    sound_menu_navigate.play();
+                                    if (settings_menu_items.at(current_settings_menu_item_index) == MENU_ITEM_BACK) {
+                                        current_menu = MENU_MAIN;
+                                    }
+                                    break;
+                                case sf::Keyboard::Escape:
+                                    sound_menu_navigate.play();
+                                    current_menu = MENU_MAIN;
+                                    break;
+                            }
                         }
                     } else {
                         game_over_timeout = 0;
@@ -462,7 +576,14 @@ int main()
         }
 
         if (game_paused && game_over_timeout == 0) {
-            draw_menu(window);
+            switch (current_menu) {
+                case MENU_MAIN:
+                    draw_main_menu(window);
+                    break;
+                case MENU_SETTINGS:
+                    draw_settings_menu(window);
+                    break;
+            }
         }
 
         window.display();
