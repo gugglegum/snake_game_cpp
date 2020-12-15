@@ -283,8 +283,12 @@ void draw_main_menu(sf::RenderWindow &window)
     float menu_item_max_width = 0;
     float current_menu_item_offset_y = 0;
     for (int i = 0; i < text_main_menu_items.size(); i++) {
-        if (game_started && main_menu_items.at(i) == MENU_ITEM_START) {
-            text_main_menu_items.at(i).setString(MENU_ITEM_RESUME);
+        if (main_menu_items.at(i) == MENU_ITEM_START) {
+            if (!game_over && game_started) {
+                text_main_menu_items.at(i).setString(MENU_ITEM_RESUME);
+            } else {
+                text_main_menu_items.at(i).setString(MENU_ITEM_START);
+            }
         }
         text_main_menu_items.at(i).setPosition(0, current_menu_item_offset_y);
         text_main_menu_items.at(i).setFillColor(current_main_menu_item_index == i ? sf::Color(224, 224, 224) : sf::Color(128, 128, 128));
