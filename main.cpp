@@ -528,28 +528,28 @@ int main()
                     int snake_direction_last = snake_direction_queue.empty() ? snake_direction : snake_direction_queue.at(0);
                     switch (event.key.code) {
                         case sf::Keyboard::Up:
-                            if (snake_direction_last != SNAKE_DIRECTION_DOWN) {
+                            if (snake_direction_last != SNAKE_DIRECTION_UP && snake_direction_last != SNAKE_DIRECTION_DOWN) {
                                 if (snake_direction_queue.size() < 2) {
                                     snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_UP);
                                 }
                             }
                             break;
                         case sf::Keyboard::Right:
-                            if (snake_direction_last != SNAKE_DIRECTION_LEFT) {
+                            if (snake_direction_last != SNAKE_DIRECTION_RIGHT && snake_direction_last != SNAKE_DIRECTION_LEFT) {
                                 if (snake_direction_queue.size() < 2) {
                                     snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_RIGHT);
                                 }
                             }
                             break;
                         case sf::Keyboard::Down:
-                            if (snake_direction_last != SNAKE_DIRECTION_UP) {
+                            if (snake_direction_last != SNAKE_DIRECTION_DOWN && snake_direction_last != SNAKE_DIRECTION_UP) {
                                 if (snake_direction_queue.size() < 2) {
                                     snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_DOWN);
                                 }
                             }
                             break;
                         case sf::Keyboard::Left:
-                            if (snake_direction_last != SNAKE_DIRECTION_RIGHT) {
+                            if (snake_direction_last != SNAKE_DIRECTION_LEFT && snake_direction_last != SNAKE_DIRECTION_RIGHT) {
                                 if (snake_direction_queue.size() < 2) {
                                     snake_direction_queue.insert(snake_direction_queue.begin(), SNAKE_DIRECTION_LEFT);
                                 }
