@@ -26,12 +26,18 @@ const int score_bar_height = 60;
 const int window_width = field_size_x * cell_size;
 const int window_height = field_size_y * cell_size + score_bar_height;
 
-int field[field_size_y][field_size_x];
-int snake_position_x;
-int snake_position_y;
-int snake_length = 0;
-int snake_direction = SNAKE_DIRECTION_RIGHT;
-int score = 0;
+struct GameState {
+    int field[field_size_y][field_size_x];
+    int snake_position_x;
+    int snake_position_y;
+    int snake_length = 0;
+    int snake_direction = SNAKE_DIRECTION_RIGHT;
+    int score = 0;
+};
+GameState game_state;
+std::vector<GameState> game_last_states;
+bool rollback = false;
+int lives = 3;
 bool game_started = false;
 bool game_over = false;
 int game_over_timeout = 0;
@@ -52,6 +58,9 @@ sf::Sprite apple;
 
 sf::Texture wall_texture;
 sf::Sprite wall;
+
+sf::Texture life_texture;
+sf::Sprite life;
 
 sf::SoundBuffer sb_menu_navigate;
 sf::Sound sound_menu_navigate;
@@ -88,7 +97,7 @@ int get_random_empty_cell()
     int empty_cell_count = 0;
     for (int j = 0; j < field_size_y; j++) {
         for (int i = 0; i < field_size_x; i++) {
-            if (field[j][i] == FIELD_CELL_TYPE_NONE) {
+            if (game_state.field[j][i] == FIELD_CELL_TYPE_NONE) {
                 empty_cell_count++;
             }
         }
@@ -97,7 +106,7 @@ int get_random_empty_cell()
     int empty_cell_index = 0;
     for (int j = 0; j < field_size_y; j++) {
         for (int i = 0; i < field_size_x; i++) {
-            if (field[j][i] == FIELD_CELL_TYPE_NONE) {
+            if (game_state.field[j][i] == FIELD_CELL_TYPE_NONE) {
                 if (empty_cell_index == target_empty_cell_index) {
                     return j * field_size_x + i;
                 }
@@ -112,7 +121,7 @@ void add_apple()
 {
     int apple_pos = get_random_empty_cell();
     if (apple_pos != -1) {
-        field[apple_pos / field_size_x][apple_pos % field_size_x] = FIELD_CELL_TYPE_APPLE;
+        game_state.field[apple_pos / field_size_x][apple_pos % field_size_x] = FIELD_CELL_TYPE_APPLE;
     }
 }
 
@@ -120,22 +129,22 @@ void clear_field()
 {
     for (int j = 0; j < field_size_y; j++) {
         for (int i = 0; i < field_size_x; i++) {
-            field[j][i] = FIELD_CELL_TYPE_NONE;
+            game_state.field[j][i] = FIELD_CELL_TYPE_NONE;
         }
     }
-    for (int i = 0; i < snake_length; i++) {
-        field[snake_position_y][snake_position_x - i] = snake_length - i;
+    for (int i = 0; i < game_state.snake_length; i++) {
+        game_state.field[game_state.snake_position_y][game_state.snake_position_x - i] = game_state.snake_length - i;
     }
     for (int i = 0; i < field_size_x; i++) {
         if (i < 5 || field_size_x - i - 1 < 5) {
-            field[0][i] = FIELD_CELL_TYPE_WALL;
-            field[field_size_y - 1][i] = FIELD_CELL_TYPE_WALL;
+            game_state.field[0][i] = FIELD_CELL_TYPE_WALL;
+            game_state.field[field_size_y - 1][i] = FIELD_CELL_TYPE_WALL;
         }
     }
     for (int i = 1; i < field_size_y - 1; i++) {
         if (i < 5 || field_size_y - i - 1 < 5) {
-            field[i][0] = FIELD_CELL_TYPE_WALL;
-            field[i][field_size_x - 1] = FIELD_CELL_TYPE_WALL;
+            game_state.field[i][0] = FIELD_CELL_TYPE_WALL;
+            game_state.field[i][field_size_x - 1] = FIELD_CELL_TYPE_WALL;
         }
     }
     add_apple();
@@ -166,6 +175,9 @@ void init_game()
 
     wall_texture.loadFromFile("images/wall.png");
     wall.setTexture(wall_texture);
+
+    life_texture.loadFromFile("images/life.png");
+    life.setTexture(life_texture);
 
     sb_menu_navigate.loadFromFile("sounds/menu-navigate-02.wav");
     sound_menu_navigate.setBuffer(sb_menu_navigate);
@@ -220,11 +232,11 @@ void init_game()
 
 void start_game()
 {
-    snake_position_x = field_size_x / 2;
-    snake_position_y = field_size_y / 2;
-    snake_length = 4;
-    snake_direction = SNAKE_DIRECTION_RIGHT;
-    score = 0;
+    game_state.snake_position_x = field_size_x / 2;
+    game_state.snake_position_y = field_size_y / 2;
+    game_state.snake_length = 4;
+    game_state.snake_direction = SNAKE_DIRECTION_RIGHT;
+    game_state.score = 0;
     game_started = true;
     game_over = false;
     game_paused = false;
@@ -240,11 +252,21 @@ void finish_game()
     current_main_menu_item_index = 0;
 }
 
+void snake_died()
+{
+    lives--;
+    if (lives > 0) {
+        rollback = true;
+    } else {
+        finish_game();
+    }
+}
+
 void draw_field(sf::RenderWindow &window)
 {
     for (int j = 0; j < field_size_y; j++) {
         for (int i = 0; i < field_size_x; i++) {
-            switch (field[j][i]) {
+            switch (game_state.field[j][i]) {
                 case FIELD_CELL_TYPE_NONE:
                     none.setPosition(float(i * cell_size), float(j * cell_size + score_bar_height));
                     window.draw(none);
@@ -269,9 +291,14 @@ void draw_score_bar(sf::RenderWindow &window)
 {
     window.draw(text_title);
 
-    text_score.setString("Score: " + std::to_string(score));
+    text_score.setString("Score: " + std::to_string(game_state.score));
     text_score.setPosition(window_width - text_score.getLocalBounds().width - 20, 10);
     window.draw(text_score);
+
+    for (int i = 0; i < lives; i++) {
+        life.setPosition((window_width - 3 * 48) / 2 + i * 48, (score_bar_height - 48) / 2);
+        window.draw(life);
+    }
 }
 
 void draw_main_menu(sf::RenderWindow &window)
@@ -352,8 +379,8 @@ void grow_snake()
 {
     for (int j = 0; j < field_size_y; j++) {
         for (int i = 0; i < field_size_x; i++) {
-            if (field[j][i] > FIELD_CELL_TYPE_NONE) {
-                field[j][i]++;
+            if (game_state.field[j][i] > FIELD_CELL_TYPE_NONE) {
+                game_state.field[j][i]++;
             }
         }
     }
@@ -361,63 +388,67 @@ void grow_snake()
 
 void make_move()
 {
-    switch (snake_direction) {
+    game_last_states.push_back(game_state);
+    if (game_last_states.size() > 10) {
+        game_last_states.erase(game_last_states.begin());
+    }
+    switch (game_state.snake_direction) {
         case SNAKE_DIRECTION_UP:
-            snake_position_y--;
-            if (snake_position_y < 0) {
-                snake_position_y = field_size_y - 1;
+            game_state.snake_position_y--;
+            if (game_state.snake_position_y < 0) {
+                game_state.snake_position_y = field_size_y - 1;
             }
             break;
         case SNAKE_DIRECTION_RIGHT:
-            snake_position_x++;
-            if (snake_position_x > field_size_x - 1) {
-                snake_position_x = 0;
+            game_state.snake_position_x++;
+            if (game_state.snake_position_x > field_size_x - 1) {
+                game_state.snake_position_x = 0;
             }
             break;
         case SNAKE_DIRECTION_DOWN:
-            snake_position_y++;
-            if (snake_position_y > field_size_y - 1) {
-                snake_position_y = 0;
+            game_state.snake_position_y++;
+            if (game_state.snake_position_y > field_size_y - 1) {
+                game_state.snake_position_y = 0;
             }
             break;
         case SNAKE_DIRECTION_LEFT:
-            snake_position_x--;
-            if (snake_position_x < 0) {
-                snake_position_x = field_size_x - 1;
+            game_state.snake_position_x--;
+            if (game_state.snake_position_x < 0) {
+                game_state.snake_position_x = field_size_x - 1;
             }
             break;
     }
 
-    if (field[snake_position_y][snake_position_x] != FIELD_CELL_TYPE_NONE) {
-        switch (field[snake_position_y][snake_position_x]) {
+    if (game_state.field[game_state.snake_position_y][game_state.snake_position_x] != FIELD_CELL_TYPE_NONE) {
+        switch (game_state.field[game_state.snake_position_y][game_state.snake_position_x]) {
             case FIELD_CELL_TYPE_APPLE:
                 sound_ate_apple.play();
-                snake_length++;
-                score++;
+                game_state.snake_length++;
+                game_state.score++;
                 grow_snake();
                 add_apple();
                 break;
             case FIELD_CELL_TYPE_WALL:
                 sound_died_against_the_wall.play();
-                finish_game();
+                snake_died();
                 break;
             default:
-                if (field[snake_position_y][snake_position_x] > 1) {
+                if (game_state.field[game_state.snake_position_y][game_state.snake_position_x] > 1) {
                     sound_ate_himself.play();
-                    finish_game();
+                    snake_died();
                 }
         }
     }
 
-    if (!game_over) {
+    if (!game_over && !rollback) {
         for (int j = 0; j < field_size_y; j++) {
             for (int i = 0; i < field_size_x; i++) {
-                if (field[j][i] > FIELD_CELL_TYPE_NONE) {
-                    field[j][i]--;
+                if (game_state.field[j][i] > FIELD_CELL_TYPE_NONE) {
+                    game_state.field[j][i]--;
                 }
             }
         }
-        field[snake_position_y][snake_position_x] = snake_length;
+        game_state.field[game_state.snake_position_y][game_state.snake_position_x] = game_state.snake_length;
     }
 }
 
@@ -529,7 +560,7 @@ int main()
                         game_over_timeout = 0;
                     }
                 } else {
-                    int snake_direction_last = snake_direction_queue.empty() ? snake_direction : snake_direction_queue.at(0);
+                    int snake_direction_last = snake_direction_queue.empty() ? game_state.snake_direction : snake_direction_queue.at(0);
                     switch (event.key.code) {
                         case sf::Keyboard::Up:
                             if (snake_direction_last != SNAKE_DIRECTION_UP && snake_direction_last != SNAKE_DIRECTION_DOWN) {
@@ -567,12 +598,21 @@ int main()
             }
         }
         if (!snake_direction_queue.empty()) {
-            snake_direction = snake_direction_queue.back();
+            game_state.snake_direction = snake_direction_queue.back();
             snake_direction_queue.pop_back();
         }
 
         if (!game_paused) {
-            make_move();
+            if (!rollback) {
+                make_move();
+            } else {
+                if (!game_last_states.empty()) {
+                    game_state = game_last_states.back();
+                    game_last_states.pop_back();
+                } else {
+                    rollback = false;
+                }
+            }
         }
 
         window.clear(sf::Color(183, 212, 168));
