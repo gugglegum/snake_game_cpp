@@ -1,6 +1,6 @@
 /.idea
-/cmake-build-debug/*
 !/cmake-build-debug/images
 !/cmake-build-debug/fonts
 !/cmake-build-debug/sounds
+/cmake-build-debug/*
 /CMakeLists.txt
