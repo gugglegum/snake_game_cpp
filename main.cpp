@@ -50,6 +50,9 @@ int settings_volume = 50;
 sf::Texture snake_texture;
 sf::Sprite snake;
 
+sf::Texture head_texture;
+sf::Sprite head;
+
 sf::Texture none_texture;
 sf::Sprite none;
 
@@ -167,6 +170,9 @@ void init_game()
     snake_texture.loadFromFile("images/snake.png");
     snake.setTexture(snake_texture);
 
+    head_texture.loadFromFile("images/head.png");
+    head.setTexture(head_texture);
+
     none_texture.loadFromFile("images/none.png");
     none.setTexture(none_texture);
 
@@ -280,8 +286,30 @@ void draw_field(sf::RenderWindow &window)
                     window.draw(wall);
                     break;
                 default:
-                    snake.setPosition(float(i * cell_size), float(j * cell_size + score_bar_height));
-                    window.draw(snake);
+                    if (game_state.field[j][i] == game_state.snake_length) {
+                        float offset_x = head.getLocalBounds().width / 2;
+                        float offset_y = head.getLocalBounds().height / 2;
+                        head.setPosition(float(i * cell_size + offset_x), float(j * cell_size + score_bar_height + offset_y));
+                        head.setOrigin(offset_x, offset_y);
+                        switch (game_state.snake_direction) {
+                            case SNAKE_DIRECTION_UP:
+                                head.setRotation(0);
+                                break;
+                            case SNAKE_DIRECTION_RIGHT:
+                                head.setRotation(90);
+                                break;
+                            case SNAKE_DIRECTION_DOWN:
+                                head.setRotation(180);
+                                break;
+                            case SNAKE_DIRECTION_LEFT:
+                                head.setRotation(-90);
+                                break;
+                        }
+                        window.draw(head);
+                    } else {
+                        snake.setPosition(float(i * cell_size), float(j * cell_size + score_bar_height));
+                        window.draw(snake);
+                    }
             }
         }
     }
