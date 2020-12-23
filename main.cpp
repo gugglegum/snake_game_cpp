@@ -18,6 +18,7 @@
 #define MENU_ITEM_VOLUME "Volume"
 #define MENU_MAIN 0
 #define MENU_SETTINGS 1
+#define LIVES 3
 
 const int field_size_x = 35;
 const int field_size_y = 25;
@@ -37,7 +38,7 @@ struct GameState {
 GameState game_state;
 std::vector<GameState> game_last_states;
 bool rollback = false;
-int lives = 3;
+int lives = 0;
 bool game_started = false;
 bool game_over = false;
 int game_over_timeout = 0;
@@ -246,6 +247,7 @@ void start_game()
     game_started = true;
     game_over = false;
     game_paused = false;
+    lives = LIVES;
     clear_field();
     sound_game_start.play();
 }
@@ -324,7 +326,7 @@ void draw_score_bar(sf::RenderWindow &window)
     window.draw(text_score);
 
     for (int i = 0; i < lives; i++) {
-        life.setPosition((window_width - 3 * 48) / 2 + i * 48, (score_bar_height - 48) / 2);
+        life.setPosition((window_width - LIVES * 48) / 2 + i * 48, (score_bar_height - 48) / 2);
         window.draw(life);
     }
 }
